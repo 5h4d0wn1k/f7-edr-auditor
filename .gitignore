@@ -2,3 +2,11 @@ __pycache__/
 *.pyc
 *.pyo
 .DS_Store
+.venv/
+venv/
+build/
+dist/
+*.egg-info/
+reports/
+*.json
+*.html

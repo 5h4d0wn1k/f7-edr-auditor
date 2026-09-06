@@ -1,0 +1,36 @@
+# f7-edr-auditor — configuration.
+# Placeholders only: no real paths, hosts, or secrets live here.
+# The audit tool only ever reads the machines YOU own (see README).
+
+report:
+  dir: reports
+
+score:
+  # Findings with severity below this value are still reported but do not lower
+  # the score. Order (highest -> lowest): critical, high, medium, low, info.
+  min_severity: low
+  # Per-module weights for the final 0-100 hardening score.
+  weights:
+    persistence: 30
+    services: 15
+    sockets: 15
+    patches: 20
+    hardening: 20
+
+scan_scope:
+  # Windows registry hive files parsed passively (no privileged APIs).
+  # Placeholders: copy NTUSER.DAT / SOFTWARE / SYSTEM from your own machine.
+  hives:
+    hklm_software: /offline/hives/SOFTWARE
+    hklm_system: /offline/hives/SYSTEM
+    hku_ntuser: /offline/hives/NTUSER.DAT
+  # Linux enabled-services baseline to diff against ("edr compare" friendly).
+  services:
+    baseline: []
+  # Packages that must not fall below a version, e.g. "openssh-server>=9.0p1".
+  patches:
+    watch: []
+  # Ports worth calling out when bound on all interfaces (0.0.0.0 / ::).
+  sockets:
+    risky_ports: [23, 25, 3306, 5432, 6379, 5900, 6000]
+    critical_watch: []

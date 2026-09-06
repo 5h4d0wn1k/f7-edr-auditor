@@ -1,0 +1,3 @@
+# f7-edr-auditor is pure Python 3 standard library only.
+# There are no third-party dependencies. The installed package provides the
+# `edr` console script; see pyproject.toml (requires >= Python 3.9).
