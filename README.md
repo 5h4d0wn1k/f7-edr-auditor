@@ -3,184 +3,66 @@
 > or hold explicit written authorization to assess**. Unauthorized use is
 > prohibited and may be illegal. Read [ETHICS.md](ETHICS.md) and
 > [SCOPE.md](SCOPE.md) before use. Use at your own risk; **AS IS**, no warranty.
-# F7 — EDR Auditor (endpoint hardening auditor, blue-team)
 
-A dependency-free Python toolkit that audits the hardening posture of an
-endpoint (persistence, services, sockets, patches, hardening policy), scores
-it 0–100, and turns findings into measurable before/after delta reports —
-all **read-only** and **offline** by design.
+# F7 — EDR Auditor (Endpoint Hardening Auditor, Blue-Team)
 
-This is the production upgrade of `firmware/edr_auditor.py` (legacy demo,
-kept on the repo for reference).
+Dependency-free Python toolkit that audits an endpoint's hardening posture — persistence, services, sockets, patches, hardening policy — scores it 0–100, and produces measurable before/after delta reports. Read-only and offline by design.
 
-## Overview
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/5h4d0wn1k/f7-edr-auditor.svg)](https://github.com/5h4d0wn1k/f7-edr-auditor)
+[![Last commit](https://img.shields.io/github/last-commit/5h4d0wn1k/f7-edr-auditor.svg)](https://github.com/5h4d0wn1k/f7-edr-auditor)
+[![Issues](https://img.shields.io/github/issues/5h4d0wn1k/f7-edr-auditor.svg)](https://github.com/5h4d0wn1k/f7-edr-auditor)
 
-- **Audit modules** (weighted, pluggable):
-  - `persistence` — Linux autostart `.desktop` files, crontab, systemd units;
-    Windows Run/RunOnce registry-hive keys (passive)
-  - `services` — enabled services vs. a baseline allowlist (systemctl;
-    Windows `ControlSet001\Services` Start=2 from hive files)
-  - `sockets` — listening TCP/UDP sockets + owning process; wildcard /
-    risky-port exposure
-  - `patches` — installed package/update status vs. a version watchlist
-  - `hardening` — SSH config + file permissions, password policy
-    (login.defs / PAM / shadow), host firewall status
-- **Scoring**: weighted findings → 0–100 score; severity band (critical …
-  clean) exposed on every report; `compare` measures remediation delta.
-- **Reports**: JSON + self-contained HTML (stdlib only), written to
-  `reports/` (gitignored).
-- **Offline self-test**: builds a synthetic sandbox in `/tmp`, runs every
-  module, asserts findings + report artifacts, exits 0 in well under 15 s.
-- **Passive hive mode**: audit your own Windows `NTUSER.DAT` / `SOFTWARE` /
-  `SYSTEM` hive copies from Linux, no privileged Windows access required.
+## Why
 
-## IMPORTANT: Read before use.
+Defensive teams need a repeatable, quantitative picture of an endpoint before, during, and after hardening. F7 measures what a real EDR would watch — persistence mechanisms, enabled services, exposed sockets, package patch levels, and hardening policy — and turns findings into a single 0–100 score plus a `compare` delta, so remediation is provable, not anecdotal. Auditing is read-only, offline-first, and safe to run on machines you own.
 
-This project is provided for **educational and defensive security purposes only**.
+## Features
 
-### Authorization Requirements
-- This tool audits the hardening posture of systems you are **authorized to
-  defend** (your own machines, lab VMs, or hosts under your organization's
-  written authorization)
-- It must NEVER be run against systems you do not own or are not authorized
-  to assess
+- **Weighted audit modules** — `persistence` (desktop autostart, crontab, systemd, Windows Run/RunOnce hive keys), `services` (allowlist diff), `sockets` (listening + owning process, wildcard/risky ports), `patches` (version watchlist), `hardening` (SSH config, permissions, password policy, firewall)
+- **0–100 hardening score** with severity bands on every report
+- **`compare` remediation delta** between a before/after audit pair
+- **JSON + self-contained HTML reports** (stdlib only) to `reports/` (gitignored)
+- **Passive Windows hive mode** — parse your own `NTUSER.DAT` / `SOFTWARE` / `SYSTEM` copies from Linux with no privileged Windows access
+- **Offline self-test** — synthetic `/tmp` sandbox, 27/27 checks, exit 0 in under 15 s
 
-### Legal Framework
-- **Computer Fraud and Abuse Act (CFAA)**: Unauthorized access to computer
-  systems is a federal crime
-- **Computer Misuse / Data Protection Laws**: Accessing a system (including
-  running local audits such as `--host local`) or exfiltrating its data
-  without authorization is unlawful
-- **State Laws**: Many states have additional computer crime statutes
-- **Export / End-Use Controls**: Defensive security tools may be subject to
-  export-control obligations
-
-### Acceptable Use
-- Auditing your own machines and lab targets
-- Authorized SOC / blue-team vulnerability-and-hardening assessments
-- Academic research in controlled lab environments
-- Security education and training on defensive posture
-
-### Prohibited Use
-- Using this tool to find weaknesses on systems you are not authorized to test
-- Leveraging findings to attack or bypass controls on third-party systems
-- Any activity that violates applicable laws or regulations
-
-### No Warranty
-This software is provided "AS IS" without warranty of any kind. The author is
-not responsible for any misuse or damage caused by this software.
-
-### Responsible Disclosure
-If you discover weaknesses using this tool, follow responsible disclosure:
-1. Report to the owning organization (your own or a client) privately
-2. Provide the vendor with the gap findings and remediation guidance
-3. Do not weaponize findings against third parties
-
-## Installation
+## Quickstart
 
 ```bash
-# Python 3.8+ stdlib only — no third-party dependencies.
+git clone https://github.com/5h4d0wn1k/f7-edr-auditor.git && cd f7-edr-auditor
 python3 -m venv .venv && . .venv/bin/activate
-pip install -e .            # provides the `edr` console command
-# or run without installing:
-PYTHONPATH=src python3 -m edr_auditor --help
+pip install -e .                      # provides the `edr` console command
+
+edr selftest                          # offline self-test, exit 0
+edr modules --list                    # audit modules + data sources
+edr audit --host fixture --out both   # synthetic sandbox only — never touches your host
+edr audit --host hive --out json      # passive audit of your own Windows hive copies
+edr audit --host local --out html     # read-only audit of the local Linux host
+edr score reports/audit-<host>-*.json # re-score an existing report
+edr compare --before before.json --after after.json --out both
 ```
 
-## Usage
+Configure weights, severity threshold, hive paths, service baselines and patch watchlists in `config/edr.yaml` (placeholders only — review before use).
 
-```bash
-# Offline self-test (should always exit 0, <15s)
-edr selftest
+## Project structure
 
-# List modules + data sources
-edr modules --list
+- `src/edr_auditor/` — CLI, pipeline, scoring, reporting and the five modules
+- `config/edr.yaml` — weighted configuration (placeholders only)
+- `tests/` — 99 unit tests; `firmware/` — legacy demo kept for reference
+- [METRICS.md](METRICS.md) — benchmark score cards and delta discipline
 
-# Synthetic sandbox audit (never touches the real host)
-edr audit --host fixture --out both
+## Documentation
 
-# Passive audit of your own Windows hive copies (declare paths in config)
-edr audit --host hive --out json
+- [METRICS.md](METRICS.md) — scoring, benchmarks and before/after discipline
+- [ETHICS.md](ETHICS.md) — educational purpose and authorized use only
+- [SCOPE.md](SCOPE.md) — authorized-testing scope checklist
+- [SECURITY.md](SECURITY.md) — vulnerability reporting
+- [CONTRIBUTING.md](CONTRIBUTING.md) — safe contribution guidelines
 
-# Live audit of the local Linux host (read-only; best as root)
-edr audit --host local --out html
+## Contributing
 
-# Recompute the score of an existing report
-edr score reports/audit-<host>-<mode>-<ts>.json
-
-# Remediation delta between two runs
-edr compare --before reports/audit-A-before.json --after reports/audit-A-after.json \
-            --out both
-```
-
-Reports land in `reports/` by default (gitignored; filenames embed host, mode
-and timestamp). Point `--report-dir` somewhere else to keep artifacts.
-
-Configuration lives in `config/edr.yaml` (weights, severity threshold, report
-dir, scan scope / hive paths, baseline + watchlists). Placeholders only —
-review before use.
-
-## Metrics
-
-Scoring, benchmark tables, and the before/after discipline are documented in
-[`METRICS.md`](METRICS.md). Every hardening change must be gated by
-`edr compare` and must not regress the score.
-
-## Live Lab Test Plan
-
-Purpose: prove the auditor detects a *known* persistence drop on a box under
-your control — end-to-end, offline, with a measured score delta.
-
-1. **Target**: a disposable Linux VM (fresh OS install) or
-   `edr audit --host local` on a machine you own.
-2. **Baseline**: `edr audit --host local --out json` → record score
-   (expect ~90–100 on a stock install; lower if already misconfigured).
-3. **Install known persistence** (on the target, as root):
-   ```bash
-   mkdir -p /tmp/edrlab
-   echo '#!/bin/sh'                  > /tmp/edrlab/helper.sh
-   echo 'nc -lp 31337'              >> /tmp/edrlab/helper.sh
-   chmod +x /tmp/edrlab/helper.sh
-   # autostart
-   printf '[Desktop Entry]\nType=Application\nExec=/tmp/edrlab/helper.sh\nHidden=false\n' \
-     > /etc/xdg/autostart/edrlab.desktop
-   # cron
-   (crontab -l 2>/dev/null; printf '*/5 * * * * /tmp/edrlab/helper.sh\n') | crontab -
-   # systemd
-   printf '[Unit]\nDescription=edrlab\n[Service]\nExecStart=/tmp/edrlab/helper.sh\n' \
-     > /etc/systemd/system/edrlab.service
-   systemctl daemon-reload && systemctl enable --now edrlab.service
-   ```
-4. **Re-audit**: `edr audit --host local --out json` → score must **drop**,
-   and the persistence module must **name each planted item**
-   (edrlab.desktop, the cron line, edrlab.service).
-5. **Delta**: `edr compare --before <baseline.json> --after <after.json>` →
-   `new findings` ≥ 3, delta must be negative (score drop); record the delta
-   in the METRICS.md score card.
-6. **Cleanup**: remove the three items, re-run the audit, confirm the delta
-   returns to ~0 and the findings resolve.
-7. **Pass criteria**: score drop ↔ findings named ↔ resolution verified; no
-   findings against an untouched stock install; self-test still 27/27.
-
-## Platform Support
-
-| Mode | OS | Data source | Privilege |
-|---|---|---|---|
-| `--host hive` | any (parse copies of your own hives) | NTUSER.DAT / SOFTWARE / SYSTEM (passive) | none |
-| `--host fixture` | any | synthetic sandbox in `/tmp` | none |
-| `--host local` | **Linux** (Debian/Ubuntu & friends tested) | systemctl, ss, dpkg-query, /etc files, ufw/nft/iptables | read-only; root recommended for shadow/socket attribution |
-| `--host local` | Windows | not supported yet — use `--host hive` instead | — |
-
-macOS / *BSD local collection is not yet implemented (patch module and live
-pipeline); hive parsing and reports are platform-independent.
-
-## Tests
-
-```bash
-python3 -m py_compile src/edr_auditor/*.py src/edr_auditor/modules/*.py firmware/edr_auditor.py
-PYTHONPATH=src python3 -m unittest discover -s tests -v   # 99 tests
-PYTHONPATH=src python3 -m edr_auditor selftest            # 27/27 checks, exit 0
-```
+New audit modules, platform support, and hardening guidance are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md); the auditor must remain read-only, offline, and defensive.
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE). Provided **AS IS**, without warranty, for education and authorized defensive security use only.
